@@ -11,6 +11,7 @@ import sys
 import subprocess
 import google.generativeai as genai
 from pathlib import Path
+from github import Github
 
 # Check if GOOGLE_API_KEY is set
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -18,6 +19,13 @@ if not GOOGLE_API_KEY:
     print("Error: GOOGLE_API_KEY environment variable is not set.")
     print("Please set it with: export GOOGLE_API_KEY='your-api-key'")
     sys.exit(1)
+
+# Check if GITHUB_TOKEN is set
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+if not GITHUB_TOKEN:
+    print("Warning: GITHUB_TOKEN environment variable is not set.")
+    print("PR comments will not be posted without a GitHub token.")
+    print("Please set it with: export GITHUB_TOKEN='your-github-token'")
 
 # Configure the Gemini API
 genai.configure(api_key=GOOGLE_API_KEY)
@@ -80,6 +88,66 @@ def review_code(diff, guidelines):
         print(f"Error generating review with Gemini: {e}")
         sys.exit(1)
 
+def get_pr_info():
+    """Get PR information from GitHub Actions environment variables."""
+    # In GitHub Actions, these environment variables are available
+    github_repository = os.environ.get("GITHUB_REPOSITORY")
+    pr_number_str = None
+
+    # Get PR number from GITHUB_REF (for pull request events)
+    github_ref = os.environ.get("GITHUB_REF")
+    if github_ref and github_ref.startswith("refs/pull/") and github_ref.endswith("/merge"):
+        pr_number_str = github_ref.split("/")[2]
+
+    # Alternatively, get from github.event.pull_request.number via GITHUB_EVENT_PATH
+    if not pr_number_str:
+        event_path = os.environ.get("GITHUB_EVENT_PATH")
+        if event_path:
+            import json
+            try:
+                with open(event_path, 'r') as f:
+                    event = json.load(f)
+                    if 'pull_request' in event and 'number' in event['pull_request']:
+                        pr_number_str = str(event['pull_request']['number'])
+            except Exception as e:
+                print(f"Error reading event file: {e}")
+
+    if not github_repository or not pr_number_str:
+        print("Could not determine PR information from environment variables.")
+        return None, None
+
+    try:
+        pr_number = int(pr_number_str)
+        return github_repository, pr_number
+    except ValueError:
+        print(f"Invalid PR number: {pr_number_str}")
+        return None, None
+
+def post_pr_comment(review):
+    """Post the review as a comment on the PR."""
+    if not GITHUB_TOKEN:
+        print("Skipping PR comment: GITHUB_TOKEN not set.")
+        return False
+
+    repo_name, pr_number = get_pr_info()
+    if not repo_name or not pr_number:
+        print("Skipping PR comment: Could not determine PR information.")
+        return False
+
+    try:
+        # Initialize GitHub client
+        g = Github(GITHUB_TOKEN)
+        repo = g.get_repo(repo_name)
+        pr = repo.get_pull(pr_number)
+
+        # Post comment
+        pr.create_issue_comment(review)
+        print(f"Successfully posted review comment to PR #{pr_number}")
+        return True
+    except Exception as e:
+        print(f"Error posting comment to PR: {e}")
+        return False
+
 def main():
     """Main function to run the code review."""
     print("Fetching git changes...")
@@ -93,6 +161,10 @@ def main():
 
     print("\n=== CODE REVIEW RESULTS ===\n")
     print(review)
+
+    # Post review as PR comment
+    print("\nPosting review as PR comment...")
+    post_pr_comment(review)
 
 if __name__ == "__main__":
     main()
