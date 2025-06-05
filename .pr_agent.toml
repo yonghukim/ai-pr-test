@@ -1,0 +1,18 @@
+[config]
+response_language = "ko-KR"
+model = "gemini/gemini-2.0-flash"
+fallback_models = ["gemini/gemini-1.5-flash"]
+
+[github_action_config]
+auto_describe = false
+auto_imporeve = true
+auto_review = false
+
+[pr_code_suggestions]
+commitable_code_suggestions = true
+extra_instructions = """\
+1. Answer in Korean.
+2. Answer with Java code only.
+3. Answer only if the coding guidelines in the file below are violated.
+    - /code-guidelines.md
+"""
