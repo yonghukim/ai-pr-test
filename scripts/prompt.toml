@@ -47,7 +47,7 @@ here is an example of the expected output format:
             "file": "src/main/java/com/example/demo/controller/TestController.java",
             "startLine": 1,
             "endLine": 10,
-            "side": "left",
+            "side": "RIGHT",
             "guideline": "Use of deprecated method",
             "explanation": "The method 'oldMethod()' is deprecated and should not be used.",
             "suggestionCode": "newMethod()"
