@@ -18,33 +18,26 @@ OUTPUT:
 - `violations` should be an empty array if no violations are found.
 - `violations` each should include:
   - `file`
-    - required: true
     - type: string
     - description: The file path where the violation occurs.
   - `startLine`:
-     - required: true
     - type: integer
     - description: The starting line number of the violation.
   - `endLine`:
-    - required: true
     - type: integer
     - description: The ending line number of the violation.(startLine and endLine can be the same if the violation is on a single line.)
   - `side`:
-     - required: true
     - enum: ["LEFT", "RIGHT"]
     - description: Indicate whether the violation is on the left or right side of the diff.
   - `guideline`:
-     - required: true
     - type: string
     - description: The specific guideline that was violated.
   - `explanation`:
-    - required: true
     - type: string
     - description: A brief explanation of why it is a violation.
   - `suggestionCode`:
-    - required: false
     - type: string
-    - description: The code snippet must be compilable only in Java. If generating a code snippet is not possible, it should return an empty string. Any other type of data is not allowed.
+    - description: The code snippet must be compilable only in Java. Any other type of data is not allowed.
 
 here is an example of the expected output format:
 ```json
