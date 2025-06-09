@@ -189,7 +189,7 @@ def post_review_comments(comments):
                     side=comment["side"]
                 )
             except Exception as e:
-                print("Detailed exception information:")
+                print(comment)
                 traceback.print_exc()
 
         return True
