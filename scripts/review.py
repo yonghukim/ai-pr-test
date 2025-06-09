@@ -179,13 +179,15 @@ def post_review_comments(comments):
         # Post each comment
         for comment in comments:
             try:
+                start_line = comment["startLine"]
+                end_line = comment["endLine"]
                 body = f"{comment['guideline']}\n{comment['explanation']}\n{comment['suggestionCode']}"
                 pr.create_review_comment(
                     body=body,
                     commit=latest_commit,
                     path=comment["file"],
-                    line=comment["endLine"],
-                    start_line=comment["startLine"],
+                    line=end_line,
+                    start_line= start_line if start_line != end_line else None,
                     side=comment["side"]
                 )
             except Exception as e:
