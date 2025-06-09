@@ -188,14 +188,23 @@ def post_review_comments(comments):
                 start_line = int(comment["startLine"])
                 end_line = int(comment["endLine"])
                 body = f"{comment['guideline']}\n{comment['explanation']}\n{wrap_suggestion_code(comment['suggestionCode'])}"
-                pr.create_review_comment(
-                    body=body,
-                    commit=latest_commit,
-                    path=comment["file"],
-                    line=end_line,
-                    start_line= start_line if start_line != end_line else None,
-                    side=comment["side"]
-                )
+                if start_line == end_line:
+                    pr.create_review_comment(
+                        body=body,
+                        commit=latest_commit,
+                        path=comment["file"],
+                        line=end_line,
+                        side=comment["side"]
+                    )
+                else:
+                    pr.create_review_comment(
+                        body=body,
+                        commit=latest_commit,
+                        path=comment["file"],
+                        line=end_line,
+                        start_line= start_line,
+                        side=comment["side"]
+                    )
             except Exception as e:
                 print(comment)
                 traceback.print_exc()
