@@ -135,7 +135,6 @@ def parse_review_comments(review):
 
     try:
         clean_str = re.sub(r"^```json\s*|\s*```$", "", review.strip(), flags=re.DOTALL)
-        print(clean_str)
         review_data = json.loads(clean_str)
         violations = review_data.get("violations", [])
         return violations
@@ -180,19 +179,19 @@ def post_review_comments(comments):
         # Post each comment
         for comment in comments:
             try:
+                body = f"{comment['guideline']}\n{comment['explanation']}\n{comment['suggestionCode']}"
                 pr.create_review_comment(
-                    body=comment["body"],
+                    body=body,
                     commit=latest_commit,
                     path=comment["file"],
-                    line=comment["line"]
+                    line=comment["endLine"],
+                    start_line=comment["startLine"],
+                    side=comment["side"]
                 )
-                print(f"Posted review comment for {comment['file']}:{comment['line']}")
             except Exception as e:
-                print(f"Error posting comment for {comment['file']}:{comment['line']}: {e}")
                 print("Detailed exception information:")
                 traceback.print_exc()
 
-        print(f"Successfully posted {len(comments)} review comments to PR #{pr_number}")
         return True
     except Exception as e:
         print(f"Error posting comments to PR: {e}")
@@ -212,19 +211,14 @@ def main():
         print("Loading prompt template...")
         prompt_template = load_prompt_template()
         prompt = prompt_template.format(guidelines=guidelines, diff=diff)
-        print(prompt)
 
         print("Requesting code review from Gemini...")
         review = review_code(prompt)
 
-        print("\n=== CODE REVIEW RESULTS ===\n")
-
         # Parse the review to get comments for specific files and lines
         print("\nParsing review comments...")
         comments = parse_review_comments(review)
-        print(comments)
 
-        return
         # Post review as line-specific PR comments
         print("\nPosting review as line-specific PR comments...")
         post_review_comments(comments)
