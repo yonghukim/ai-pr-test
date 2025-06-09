@@ -27,7 +27,7 @@ OUTPUT:
     - type: integer
     - description: The ending line number of the violation.(startLine and endLine can be the same if the violation is on a single line.)
   - `side`:
-    - enum: ["left", "right"]
+    - enum: ["LEFT", "RIGHT"]
     - description: Indicate whether the violation is on the left or right side of the diff.
   - `guideline`:
     - type: string
