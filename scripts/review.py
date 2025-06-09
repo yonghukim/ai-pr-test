@@ -147,6 +147,12 @@ def parse_review_comments(review):
         traceback.print_exc()
         return []
 
+def wrap_suggestion_code(code):
+    """Wrap the suggestion code in the GitHub suggestion format."""
+    if not code:
+        return ""
+    return f"```suggestion\n{code}\n```"
+
 def post_review_comments(comments):
     """Post the review as line comments on the PR."""
     if not GITHUB_TOKEN:
@@ -181,7 +187,7 @@ def post_review_comments(comments):
             try:
                 start_line = comment["startLine"]
                 end_line = comment["endLine"]
-                body = f"{comment['guideline']}\n{comment['explanation']}\n{comment['suggestionCode']}"
+                body = f"{comment['guideline']}\n{comment['explanation']}\n{wrap_suggestion_code(comment['suggestionCode'])}"
                 pr.create_review_comment(
                     body=body,
                     commit=latest_commit,
