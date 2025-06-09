@@ -9,6 +9,8 @@ focusing only on violations of the guidelines in docs/code-guidelines.md.
 import os
 import sys
 import subprocess
+import toml
+import traceback
 import google.generativeai as genai
 from pathlib import Path
 from github import Github
@@ -37,6 +39,8 @@ def get_git_diff():
         return subprocess.check_output(['git', 'diff', 'origin/main...HEAD', '--', '*.java']).decode('utf-8')
     except subprocess.CalledProcessError as e:
         print(f"Error executing git command: {e}")
+        print("Detailed exception information:")
+        traceback.print_exc()
         sys.exit(1)
 
 def get_code_guidelines():
@@ -51,41 +55,38 @@ def get_code_guidelines():
             return f.read()
     except Exception as e:
         print(f"Error reading code guidelines: {e}")
+        print("Detailed exception information:")
+        traceback.print_exc()
         sys.exit(1)
 
-def review_code(diff, guidelines):
+def load_prompt_template():
+    """Load the prompt template from the TOML file."""
+    try:
+        prompt_path = Path("scripts/prompt.toml")
+        if not prompt_path.exists():
+            print("Error: Prompt template file not found at scripts/prompt.toml")
+            sys.exit(1)
+
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            prompt_data = toml.load(f)
+            return prompt_data["prompt"]["content"]
+    except Exception as e:
+        print(f"Error loading prompt template: {e}")
+        print("Detailed exception information:")
+        traceback.print_exc()
+        sys.exit(1)
+
+def review_code(prompt):
     """Use Gemini to review the code changes against the guidelines."""
     try:
         # Initialize the Gemini model
         model = genai.GenerativeModel('gemini-2.0-flash')
-
-        # Prepare the prompt
-        prompt = f"""
-        You are a code reviewer for a Spring Boot project. Review the following git diff and identify ONLY violations of the code guidelines.
-
-        CODE GUIDELINES:
-        {guidelines}
-
-        GIT DIFF:
-        {diff}
-
-        INSTRUCTIONS:
-        1. Answer in Korean.
-        2. Only report violations of the code guidelines provided above.
-        3. If there are no violations, simply respond with "No violations of the code guidelines were found."
-        4. For each violation, specify:
-           - The file and line number
-           - Which guideline is violated
-           - A brief explanation of the violation
-           - A suggested fix
-        5. Be concise and focus only on actual violations, not style preferences or other issues not covered by the guidelines.
-        """
-
-        # Generate the review
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         print(f"Error generating review with Gemini: {e}")
+        print("Detailed exception information:")
+        traceback.print_exc()
         sys.exit(1)
 
 def get_pr_info():
@@ -111,6 +112,8 @@ def get_pr_info():
                         pr_number_str = str(event['pull_request']['number'])
             except Exception as e:
                 print(f"Error reading event file: {e}")
+                print("Detailed exception information:")
+                traceback.print_exc()
 
     if not github_repository or not pr_number_str:
         print("Could not determine PR information from environment variables.")
@@ -121,17 +124,39 @@ def get_pr_info():
         return github_repository, pr_number
     except ValueError:
         print(f"Invalid PR number: {pr_number_str}")
+        print("Detailed exception information:")
+        traceback.print_exc()
         return None, None
 
-def post_pr_comment(review):
-    """Post the review as a comment on the PR."""
+def parse_review_comments(review):
+    """Parse the review JSON to extract violations and convert them to comments."""
+    import json
+    import re
+
+    try:
+        clean_str = re.sub(r"^```json\s*|\s*```$", "", review.strip(), flags=re.DOTALL)
+        print(clean_str)
+        review_data = json.loads(clean_str)
+        violations = review_data.get("violations", [])
+        return violations
+    except json.JSONDecodeError as e:
+        print(f"Error parsing review JSON: {e}")
+        return []
+    except Exception as e:
+        print(f"Error processing review data: {e}")
+        print("Detailed exception information:")
+        traceback.print_exc()
+        return []
+
+def post_review_comments(comments):
+    """Post the review as line comments on the PR."""
     if not GITHUB_TOKEN:
-        print("Skipping PR comment: GITHUB_TOKEN not set.")
+        print("Skipping PR comments: GITHUB_TOKEN not set.")
         return False
 
     repo_name, pr_number = get_pr_info()
     if not repo_name or not pr_number:
-        print("Skipping PR comment: Could not determine PR information.")
+        print("Skipping PR comments: Could not determine PR information.")
         return False
 
     try:
@@ -140,31 +165,74 @@ def post_pr_comment(review):
         repo = g.get_repo(repo_name)
         pr = repo.get_pull(pr_number)
 
-        # Post comment
-        pr.create_issue_comment(review)
-        print(f"Successfully posted review comment to PR #{pr_number}")
+        if not comments:
+            print("No specific violations found to comment on.")
+            return True
+
+        # Get the latest commit in the PR
+        commits = list(pr.get_commits())
+        if not commits:
+            print("No commits found in the PR.")
+            return False
+
+        latest_commit = commits[-1]
+
+        # Post each comment
+        for comment in comments:
+            try:
+                pr.create_review_comment(
+                    body=comment["body"],
+                    commit=latest_commit,
+                    path=comment["file"],
+                    line=comment["line"]
+                )
+                print(f"Posted review comment for {comment['file']}:{comment['line']}")
+            except Exception as e:
+                print(f"Error posting comment for {comment['file']}:{comment['line']}: {e}")
+                print("Detailed exception information:")
+                traceback.print_exc()
+
+        print(f"Successfully posted {len(comments)} review comments to PR #{pr_number}")
         return True
     except Exception as e:
-        print(f"Error posting comment to PR: {e}")
+        print(f"Error posting comments to PR: {e}")
+        print("Detailed exception information:")
+        traceback.print_exc()
         return False
 
 def main():
     """Main function to run the code review."""
-    print("Fetching git changes...")
-    diff = get_git_diff()
+    try:
+        print("Fetching git changes...")
+        diff = get_git_diff()
 
-    print("Reading code guidelines...")
-    guidelines = get_code_guidelines()
+        print("Reading code guidelines...")
+        guidelines = get_code_guidelines()
 
-    print("Requesting code review from Gemini...")
-    review = review_code(diff, guidelines)
+        print("Loading prompt template...")
+        prompt_template = load_prompt_template()
+        prompt = prompt_template.format(guidelines=guidelines, diff=diff)
+        print(prompt)
 
-    print("\n=== CODE REVIEW RESULTS ===\n")
-    print(review)
+        print("Requesting code review from Gemini...")
+        review = review_code(prompt)
 
-    # Post review as PR comment
-    print("\nPosting review as PR comment...")
-    post_pr_comment(review)
+        print("\n=== CODE REVIEW RESULTS ===\n")
+
+        # Parse the review to get comments for specific files and lines
+        print("\nParsing review comments...")
+        comments = parse_review_comments(review)
+        print(comments)
+
+        return
+        # Post review as line-specific PR comments
+        print("\nPosting review as line-specific PR comments...")
+        post_review_comments(comments)
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        print("Detailed exception information:")
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
