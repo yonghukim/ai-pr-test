@@ -185,8 +185,8 @@ def post_review_comments(comments):
         # Post each comment
         for comment in comments:
             try:
-                start_line = int(comment["startLine"])
-                end_line = int(comment["endLine"])
+                start_line = int(comment["violatedRange"][0])
+                end_line = int(comment["violatedRange"][1])
                 body = f"{comment['guideline']}\n{comment['explanation']}\n{wrap_suggestion_code(comment['suggestionCode'])}"
                 if start_line == end_line:
                     pr.create_review_comment(
