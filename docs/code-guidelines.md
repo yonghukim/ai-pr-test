@@ -22,28 +22,58 @@ domain 모듈안에서 만드는 Projection Class 라면`@QueryProjection` 을 �
     - db 초기값 0 세팅
     - 엔터티 값 0 초기값 세팅
 ## DTO
-- 외부에서 요청을 표현하는 클래스
-    - Record class 를 사용한다.
-    - Controller, Consumer 에서 사용한다.
-    -  입력 데이터: ReqDto 를 postfix 로 사용한다
-        - example: `CreateReqDto`
-    - 출력 데이터: ResDto 를 postfix 로 사용한다.
-        - example: `CreateResDto`
-- service 계층의 Dto class 의 이름은 아래와 같다
-    - record 를 사용할 수 있다면 record 를 사용한다.
-    - 입력 데이터: Cmd 를 postfix 로 사용한다
-        - example: CreateCmd`
-    - 출력 데이터: Result 를 postfix 로 사용한다.
-        - example: `CreateResult`
+### 외부에서 요청을 표현하는 클래스
+- Controller, Consumer 에서 사용한다.
+- Record class 를 사용한다.
+```java
+//BAD
+class CreateReqDto {
+    private String name;
+    private int age;
+}
+//GOOD
+public record CreateReqDto(String name, int age) {}
+```
+- 입력 데이터: ReqDto 를 postfix 로 사용한다
+```java
+//BAD
+public record CreateRequest(String name, int age) {}
+//GOOD
+public record CreateReqDto(String name, int age) {}
+```
+- 출력 데이터: ResDto 를 postfix 로 사용한다.
+```java
+//BAD
+public record CreateResponse(String name, int age) {}
+//GOOD
+public record CreateResDto(String name, int age) {}
+```
 
-### 계층별 모델 사용 제한과 매핑 전략
+### 서비스 계층에서 사용하는 클래스
+- record 를 사용할 수 있다면 record 를 사용한다.
+- 입력 데이터: Cmd 를 postfix 로 사용한다
+```java
+// BAD
+public record CreateCommand (String name, int age) {}
+// GOOD
+public record CreateCmd (String name, int age) {}
+```
+- 출력 데이터: Result 를 postfix 로 사용한다.
+```java
+// BAD
+public record CreateCompleteDto (String name, int age) {}
+// GOOD
+public record CreateResult (String name, int age) {}
+```
+
+## 계층별 모델 사용 제한과 매핑 전략
 - controller
     - ReqDto -> Cmd, Result -> ResDto 로의 매핑을 담당한다.
     - entity 를 사용하지 않는다.
 - service
     - entity를 사용한다.
     - cmd -> entity, entity -> result 로 매핑을 담당한다.
-### 서비스 바운더리
+## 서비스 바운더리
 - 비지니스 로직은 외부로 나가는 모듈(api, batch, consumer...)에서 작성한다.
 - domain 모듈안에서는 repoService 만 작성한다.
 
