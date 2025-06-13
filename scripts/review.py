@@ -221,6 +221,7 @@ def main():
     try:
         print("Fetching git changes...")
         diff = get_git_diff()
+        print(diff)
 
         print("Reading code guidelines...")
         guidelines = get_code_guidelines()
@@ -231,6 +232,7 @@ def main():
 
         print("Requesting code review from Gemini...")
         review = review_code(prompt)
+        print(review)
 
         # Parse the review to get comments for specific files and lines
         print("\nParsing review comments...")
