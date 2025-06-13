@@ -4,32 +4,10 @@ You are a code reviewer for a Spring Boot project. Review the following git diff
 
 The PR code diff will be in the following structured format:
 ======
-## File: 'src/main/java/com/example/service/UserService.java'
-
-@@ ... @@ public void createUser(User user) {{
-__new hunk__
-    private final Logger logger = LoggerFactory.getLogger(UserService.class);
-
-    public void createUser(User user) {{
-        logger.info("Creating new user: {{}}", user.getUsername());
-+       validateUserData(user);
-        userRepository.save(user);
-        notificationService.sendWelcomeEmail(user.getEmail());
-    }}
-__old hunk__
-    private final Logger logger = LoggerFactory.getLogger(UserService.class);
-
-    public void createUser(User user) {{
-        logger.info("Creating new user: {{}}", user.getUsername());
--       if (user.getUsername() == null || user.getEmail() == null) {{
--           throw new IllegalArgumentException("Username and email cannot be null");
--       }}
-        userRepository.save(user);
-        notificationService.sendWelcomeEmail(user.getEmail());
-    }}
-
-@@ ... @@ private boolean isValidEmail(String email) {{
-__new hunk__
+diff --git a/src/main/java/com/example/demo/controller/CreateTestInDto.java b/src/main/java/com/example/demo/controller/CreateTestInDto.java
+...
+@@ -A,B +C,D @@
+public class TestDto {{
     private void validateUserData(User user) {{
         line
 +       new line
@@ -38,18 +16,16 @@ __new hunk__
     private boolean isValidEmail(String email) {{
         return email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
     }}
-
-## File: 'src/main/java/com/example/model/User.java'
 =======
 
 Important notes about the structured diff format above:
-1. Each PR code chunk is decoupled into separate '__new hunk__' and '__old hunk__' sections:
-  - The '__new hunk__': code chunk AFTER the PR changes.
-  - The '__old hunk__': code chunk BEFORE the PR changes. If no code was removed from the chunk, the '__old hunk__' section will be omitted.
-2. The diff uses line prefixes to show changes:
-  '+' : new line code added (will appear only in '__new hunk__')
-  '-' : line code removed (will appear only in '__old hunk__')
-  ' ' : unchanged context lines (will appear in both sections)
+1. The diff uses line prefixes to show changes:
+  '+' : new line code added
+  '-' : line code removed
+  ' ' : unchanged context lines
+2. '@@ -A,B +C,D @@' explains the range of lines affected:
+    - 'A' and 'B' indicate the start line and end line of the code chunk removed.
+    - 'C' and 'D' indicate the start line and end line of the code chunk added.
 
 CODE GUIDELINES:
 {guidelines}
@@ -69,17 +45,17 @@ OUTPUT:
   - `file`
     - type: string
     - description: The file path where the violation occurs.
+  - `violatedCode`:
+    - type: string
+    - description: The code snippet that violates the guideline.
   - `violatedRange`:
-    - type: array
-    - items:
-      - type: integer
+    - type: string
     - description:
-        - The range of lines in the file where the violation occurs.
+        - The array of start and end lines of the `violatedCode`.
         - The range should be specified as [startLine, endLine].
-        - startLine and endLine can be the same if the violation is on a single line.
-        - Minimize the range to the smallest possible section that contains the violation.
-        - If the violation spans multiple lines, include all lines in the range.
-        - import 구문은 포함하지 않습니다.
+        - startLine is the first line number of the `violatedCode`.
+        - endLine is the last line number of the `violatedCode`.
+        - startLine and endLine can be the same if the `violatedCode` is a single line.
   - `side`:
     - enum: ["LEFT", "RIGHT"]
     - description: Indicate whether the violation is on the left or right side of the diff.
@@ -93,7 +69,7 @@ OUTPUT:
     - type: string
     - description:
         - The code snippet must be compilable only in Java. Any other type of data is not allowed.
-        - Do not append comment in the code snippet. ex) // This is a comment
+        - Do not write a comment in the code snippet. ex) // This is forbidden.
 
 here is an example of the expected output format:
 ```json
@@ -101,11 +77,12 @@ here is an example of the expected output format:
     "violations": [
         {{
             "file": "src/main/java/com/example/demo/controller/TestController.java",
-            "violatedRange": [1, 10],
+            "violatedCode": "@Data\npublic class TestRequest {{\n    private final Logger logger = LoggerFactory.getLogger(TestController.class);\n",
+            "violatedRange": [1, 3],
             "side": "RIGHT",
             "guideline": "Use of deprecated method",
-            "explanation": "The method 'oldMethod()' is deprecated and should not be used.",
-            "suggestionCode": "public void newMethod() {{\n    // New implementation\n}}"
+            "explanation": "controller 에서 사용하는 dto 클래스는 record 를 사용해야합니다.",
+            "suggestionCode": "public record TestReqDto(String name) {{}}\n"
         }}
     ]
 }}
