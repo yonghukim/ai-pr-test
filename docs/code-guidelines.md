@@ -9,18 +9,96 @@
 domain 모듈안에서 만드는 Projection Class 라면`@QueryProjection` 을 사용한다.
 
 ## entity
-- entity 디렉토리에는 entity만 넣어두도록 한다.
-- enum, type 같은것들은 다른 디렉토리로 뺀다.
+- entity 디렉토리에는 entity만 넣어두도록 한다. enum, type 같은것들은 다른 디렉토리로 뺀다.
+```java
+//BAD
+package com.example.domain.entity.SomeEnum;
+
+//GOOD
+package com.example.domain.enums.SomeEnum
+```
 - entity 내부에서 생성 로직들은 추가하지 않는다, 생성이 필요한경우 mapper 나 따로 변환 util 클래스를 추가해서 사용한다.
+```java
+// BAD
+@Entity
+class SomeEntity {
+    public static SomeEntity create(String name) {
+        SomeEntity entity = new SomeEntity();
+        entity.name = name;
+        return entity;
+    }
+}
+
+// GOOD
+@Entity
+class SomeEntity {
+}
+
+public class SomeEntityMapper {
+    public static SomeEntity create(String name) {
+        SomeEntity entity = new SomeEntity();
+        entity.setName(name);
+        return entity;
+    }
+}
+```
 - 이름은 단수로 짓는다.
 - @Setter 사용을 지양한다.
-- Entity JPA 어노테이션관련
+```java
+// BAD
+@Entity
+@Setter
+class SomeEntity {
+    private String name;
+}
+
+// GOOD
+@Entity
+class SomeEntity {
+    private String name;
+    
+    public void updateName(String name) {
+        this.name = name;
+    }
+}
+```
 - @Comment 주석으로 사용
-- @Column은 기본적으로 사용하지 않고, 필요한 경우에만 사용한다.
 - @Table 을 사용한다.
+```java
+// BAD
+@Entity
+class SomeEntity {
+    private String name;
+}
+
+// GOOD
+@Entity
+@Table(name = "some_entity")
+class SomeEntity {
+    private String name;
+}
+```
 - version 컬럼 디폴트 값 세팅 (벌크 insert 시 이슈 존재)
     - db 초기값 0 세팅
     - 엔터티 값 0 초기값 세팅
+```java
+// BAD
+@Entity
+@Table(name = "some_entity")
+class SomeEntity {
+    @Version
+    private Long version;
+}
+
+// GOOD
+@Entity
+@Table(name = "some_entity")
+class SomeEntity {
+    @Version
+    private Long version = 0L;
+}
+```
+
 ## DTO
 ### 외부에서 요청을 표현하는 클래스
 - Controller, Consumer 에서 사용한다.
