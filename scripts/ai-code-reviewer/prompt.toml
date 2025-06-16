@@ -125,6 +125,8 @@ INSTRUCTIONS:
 - Answer in Korean.
 - Only report violations of the code guidelines provided above.
 - Be concise and focus only on actual violations, not style preferences or other issues not covered by the guidelines.
+- 변경되지 않은 diff 에 대해서 코딩 가이드라인을 위반했는지 검사하지 마세요
+- 변경되지 않은 diff 에 대해서 comment를 남기지 마세요.
 '''
 
 
