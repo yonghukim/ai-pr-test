@@ -12,6 +12,9 @@ import subprocess
 import toml
 import traceback
 import google.generativeai as genai
+import json
+import re
+
 from pathlib import Path
 from github import Github
 
@@ -42,6 +45,47 @@ def get_git_diff():
         print("Detailed exception information:")
         traceback.print_exc()
         sys.exit(1)
+
+def summarize_multi_file_diff(diff_text):
+    results, file_path, old_lines, new_lines = [], None, [], []
+    old_num = new_num = None
+
+    def flush():
+        if file_path:
+            results.append(f"filePath: {file_path}")
+            if old_lines:
+                results.append("old_hunk (before change):")
+                results.extend(old_lines)
+            if new_lines:
+                results.append("\nnew_hunk (after change):")
+                results.extend(new_lines)
+            results.append("")  # blank line
+
+    for line in diff_text.splitlines():
+        if line.startswith('diff --git'):
+            flush()
+            old_lines, new_lines = [], []
+            continue
+        if line.startswith('+++ b/'):
+            file_path = line[6:].strip()
+        elif line.startswith('@@'):
+            m = re.match(r'^@@ -(\d+).* \+(\d+).* @@', line)
+            if m:
+                old_num, new_num = int(m[1]), int(m[2])
+        elif line.startswith('-') and not line.startswith('---'):
+            old_lines.append(f'-{old_num:4} | {line[1:]}')
+            old_num += 1
+        elif line.startswith('+') and not line.startswith('+++'):
+            new_lines.append(f'+{new_num:4} | {line[1:]}')
+            new_num += 1
+        elif line.startswith(' '):
+            old_lines.append(f' {old_num:4} | {line[1:]}')
+            new_lines.append(f' {new_num:4} | {line[1:]}')
+            new_num += 1
+            old_num += 1
+
+    flush()  # flush last file
+    return '\n'.join(results)
 
 def get_code_guidelines():
     """Read the code guidelines from docs/code-guidelines.md."""
@@ -130,9 +174,6 @@ def get_pr_info():
 
 def parse_review_comments(review):
     """Parse the review JSON to extract violations and convert them to comments."""
-    import json
-    import re
-
     try:
         clean_str = re.sub(r"^```json\s*|\s*```$", "", review.strip(), flags=re.DOTALL)
         review_data = json.loads(clean_str)
@@ -185,25 +226,25 @@ def post_review_comments(comments):
         # Post each comment
         for comment in comments:
             try:
-                start_line = int(comment["violatedRange"][0])
-                end_line = int(comment["violatedRange"][1])
+                start_line = int(comment["startLine"]) if comment["startLine"] else None
+                line = int(comment["line"])
                 body = f"{comment['guideline']}\n{comment['explanation']}\n{wrap_suggestion_code(comment['suggestionCode'])}"
-                if start_line == end_line:
+                if start_line:
                     pr.create_review_comment(
                         body=body,
                         commit=latest_commit,
                         path=comment["file"],
-                        line=end_line,
-                        side=comment["side"]
+                        line=line,
+                        start_line=start_line,
+                        side='RIGHT'
                     )
                 else:
                     pr.create_review_comment(
                         body=body,
                         commit=latest_commit,
                         path=comment["file"],
-                        line=end_line,
-                        start_line= start_line,
-                        side=comment["side"]
+                        line=line,
+                        side='RIGHT'
                     )
             except Exception as e:
                 print(comment)
@@ -220,8 +261,8 @@ def main():
     """Main function to run the code review."""
     try:
         print("Fetching git changes...")
-        diff = get_git_diff()
-        print(diff)
+        raw_diff = get_git_diff()
+        diff = summarize_multi_file_diff(raw_diff)
 
         print("Reading code guidelines...")
         guidelines = get_code_guidelines()
@@ -232,7 +273,6 @@ def main():
 
         print("Requesting code review from Gemini...")
         review = review_code(prompt)
-        print(review)
 
         # Parse the review to get comments for specific files and lines
         print("\nParsing review comments...")
