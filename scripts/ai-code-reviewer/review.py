@@ -277,7 +277,9 @@ def main():
     try:
         print("Fetching git changes...")
         raw_diff = get_git_diff()
+        print(raw_diff)
         diff = summarize_multi_file_diff(raw_diff)
+        print(diff)
 
         print("Reading code guidelines...")
         guidelines = get_code_guidelines()
