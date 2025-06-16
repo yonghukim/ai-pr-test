@@ -38,8 +38,23 @@ genai.configure(api_key=GOOGLE_API_KEY)
 def get_git_diff():
     """Get the current git diff for Java files only."""
     try:
-        # Filter to only include Java files
-        return subprocess.check_output(['git', 'diff', 'origin/main...HEAD', '--', '*.java']).decode('utf-8')
+        # Get PR information
+        repo_name, pr_number = get_pr_info()
+
+        if repo_name and pr_number:
+            g = Github(GITHUB_TOKEN)
+            repo = g.get_repo(repo_name)
+            pr = repo.get_pull(pr_number)
+
+            target_branch = pr.base.ref
+            current_branch = pr.head.ref
+
+            return subprocess.check_output(['git', 'diff', f'origin/{target_branch}...origin/{current_branch}', '--', '*.java']).decode('utf-8')
+        else:
+            # Local environment
+            checkout_commit = subprocess.check_output(['git', 'rev-parse', 'ORIG_HEAD']).decode('utf-8').strip()
+            current_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
+            return subprocess.check_output(['git', 'diff', f'{checkout_commit}...{current_commit}', '--', '*.java']).decode('utf-8')
     except subprocess.CalledProcessError as e:
         print(f"Error executing git command: {e}")
         print("Detailed exception information:")
