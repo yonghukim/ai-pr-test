@@ -241,7 +241,7 @@ def post_review_comments(comments):
         # Post each comment
         for comment in comments:
             try:
-                start_line = int(comment["startLine"]) if comment["startLine"] else None
+                start_line = int(comment["startLine"]) if hasattr(comment, "startLine") else None
                 line = int(comment["line"])
                 body = f"{comment['guideline']}\n{comment['explanation']}\n{wrap_suggestion_code(comment['suggestionCode'])}"
                 if start_line:
