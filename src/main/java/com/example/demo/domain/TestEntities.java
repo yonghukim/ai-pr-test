@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+// target branch test
 @Entity
 @NoArgsConstructor
 @Setter
