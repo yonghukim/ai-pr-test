@@ -62,7 +62,7 @@ def get_code_guidelines():
 def load_prompt_template():
     """Load the prompt template from the TOML file."""
     try:
-        prompt_path = Path("scripts/prompt.toml")
+        prompt_path = Path("scripts/ai-code-reviewer/prompt.toml")
         if not prompt_path.exists():
             print("Error: Prompt template file not found at scripts/prompt.toml")
             sys.exit(1)

@@ -31,11 +31,11 @@ jobs:
 
       - name: 의존성 설치
         run: |
-          pip install -r requirements.txt
+          pip install -r scripts/ai-code-reviewer/requirements.txt
 
       - name: 코드 리뷰 실행
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python scripts/review.py
+          python scripts/ai-code-reviewer/review.py
