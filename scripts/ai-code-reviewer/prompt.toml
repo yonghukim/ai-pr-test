@@ -53,6 +53,14 @@ CODE GUIDELINES:
 GIT DIFF:
 {diff}
 
+INSTRUCTIONS:
+- Answer in Korean.
+- Only report violations of the code guidelines provided above.
+- Be concise and focus only on actual violations, not style preferences or other issues not covered by the guidelines.
+- Don't check for coding guideline violations in unchanged diffs.
+- Don't leave comments on unchanged diffs.
+- Don't review the code provided as an example in the prompt's diff.
+
 OUTPUT:
 - The output must be a raw JSON string
 - `violations` should be an empty array if no violations are found.
@@ -66,15 +74,15 @@ OUTPUT:
   - `line`
     - type: integer
     - description:
-        - `violatedCode` 끝 줄 번호.
-        - GitHub PR 에 comment을 남길 때는 이 줄 번호를 사용합니다.
+        - End line number of the `violatedCode`.
+        - Use this line number when commenting on the GitHub PR.
   - `startLine`:
     - type: integer
     - nullable: true
     - description:
-        - `violatedCode`의 시작 줄 번호.
-        - `violatedCode`가 한 줄 이상인 경우 시작 줄 번호.
-        - GitHub PR 에 comment을 남길 때는 이 줄 번호를 사용합니다.
+        - Start line number of the `violatedCode`
+        - only required when the `violatedCode` spans multiple lines.
+        - Use this line number when commenting on the GitHub PR.
   - `guideline`:
     - type: string
     - description: The specific guideline that was violated.
@@ -120,13 +128,5 @@ or
     ]
 }}
 ```
-
-INSTRUCTIONS:
-- Answer in Korean.
-- Only report violations of the code guidelines provided above.
-- Be concise and focus only on actual violations, not style preferences or other issues not covered by the guidelines.
-- 변경되지 않은 diff 에 대해서 코딩 가이드라인을 위반했는지 검사하지 마세요
-- 변경되지 않은 diff 에 대해서 comment를 남기지 마세요.
 '''
-
 
